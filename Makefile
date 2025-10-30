@@ -11,25 +11,25 @@
 APP_NAME := property-app
 
 setup:
-@echo "🔧 Setting up Flutter environment for $(APP_NAME)..."
-flutter pub get
+	@echo "🔧 Setting up Flutter environment for $(APP_NAME)..."
+	flutter pub get
 
 run-web:
-@echo "🌐 Running $(APP_NAME) on Web..."
-flutter run -d chrome
+	@echo "🌐 Running $(APP_NAME) on Web..."
+	flutter run -d chrome
 
 run-android:
-@echo "🤖 Running $(APP_NAME) on Android..."
-flutter run -d android
+	@echo "🤖 Running $(APP_NAME) on Android..."
+	flutter run -d android
 
 run-ios:
-@echo "🍎 Running $(APP_NAME) on iOS..."
-flutter run -d ios
+	@echo "🍎 Running $(APP_NAME) on iOS..."
+	flutter run -d ios
 
 build-web:
-@echo "📦 Building $(APP_NAME) for Web..."
-flutter build web --release -t lib/main.dart
+	@echo "📦 Building $(APP_NAME) for Web..."
+	flutter build web --release -t lib/main.dart
 
 clean:
-@echo "🧹 Cleaning build artifacts..."
-flutter clean
+	@echo "🧹 Cleaning build artifacts..."
+	flutter clean
