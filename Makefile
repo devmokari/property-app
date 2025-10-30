@@ -10,6 +10,19 @@
 
 APP_NAME := property-app
 
+.PHONY: help setup run-web run-android run-ios build-web clean
+
+.DEFAULT_GOAL := help
+
+help:
+	@echo "Property App - Available make targets:"
+	@echo "  make setup        -> Install dependencies"
+	@echo "  make run-web      -> Run on browser"
+	@echo "  make run-android  -> Run on Android"
+	@echo "  make run-ios      -> Run on iOS"
+	@echo "  make build-web    -> Build web release"
+	@echo "  make clean        -> Clean project"
+
 setup:
 	@echo "🔧 Setting up Flutter environment for $(APP_NAME)..."
 	flutter pub get
