@@ -128,11 +128,6 @@ class _AddressLookupPageState extends State<AddressLookupPage> {
                 style: theme.textTheme.headlineSmall
                     ?.copyWith(fontWeight: FontWeight.w600),
               ),
-              const SizedBox(height: 12),
-              Text(
-                "Enter a property address and we'll try to match it using Geoapify.",
-                style: theme.textTheme.bodyMedium,
-              ),
               const SizedBox(height: 24),
               TextField(
                 controller: _addressController,
