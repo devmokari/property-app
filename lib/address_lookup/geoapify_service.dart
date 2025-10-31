@@ -1,8 +1,7 @@
 import 'dart:convert';
-import 'dart:developer' as developer;
-import 'dart:io';
-
 import 'package:http/http.dart' as http;
+
+import 'log_utils.dart';
 
 class GeoapifyException implements Exception {
   GeoapifyException(this.message);
@@ -39,19 +38,19 @@ class GeoapifyService {
         jsonDecode(responseBody) as Map<String, dynamic>;
     final features = jsonMap['features'];
     if (features is! List || features.isEmpty) {
-      await _logNoMatch(query, uri, responseBody);
+      await logGeoapifyNoMatch(query, uri, responseBody);
       return null;
     }
 
     final firstFeature = features.first;
     if (firstFeature is! Map<String, dynamic>) {
-      await _logNoMatch(query, uri, responseBody);
+      await logGeoapifyNoMatch(query, uri, responseBody);
       return null;
     }
 
     final properties = firstFeature['properties'];
     if (properties is! Map<String, dynamic>) {
-      await _logNoMatch(query, uri, responseBody);
+      await logGeoapifyNoMatch(query, uri, responseBody);
       return null;
     }
 
@@ -67,7 +66,7 @@ class GeoapifyService {
         .join(', ');
 
     if (fallback.isEmpty) {
-      await _logNoMatch(query, uri, responseBody);
+      await logGeoapifyNoMatch(query, uri, responseBody);
       return null;
     }
 
@@ -78,43 +77,4 @@ class GeoapifyService {
     _httpClient.close();
   }
 
-  Future<void> _logNoMatch(String query, Uri requestUri, String responseBody) async {
-    final formattedMessage = StringBuffer()
-      ..writeln('Geoapify lookup returned no matches.')
-      ..writeln('Request: GET $requestUri')
-      ..writeln('Query: $query')
-      ..writeln('Response: $responseBody');
-
-    developer.log(
-      formattedMessage.toString(),
-      name: 'GeoapifyService',
-    );
-
-    final timestamp = DateTime.now().toIso8601String();
-    final buffer = StringBuffer()
-      ..writeln('[$timestamp] Geoapify lookup returned no matches.')
-      ..writeln('Request: GET $requestUri')
-      ..writeln('Query: $query')
-      ..writeln('Response: $responseBody')
-      ..writeln();
-
-    final logFilePath =
-        '${Directory.systemTemp.path}${Platform.pathSeparator}geoapify_service.log';
-    final logFile = File(logFilePath);
-
-    try {
-      await logFile.writeAsString(
-        buffer.toString(),
-        mode: FileMode.append,
-        flush: true,
-      );
-    } catch (error, stackTrace) {
-      developer.log(
-        'Failed to write Geoapify log file: $error',
-        name: 'GeoapifyService',
-        error: error,
-        stackTrace: stackTrace,
-      );
-    }
-  }
 }
