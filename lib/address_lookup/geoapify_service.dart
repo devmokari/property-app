@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:developer' as developer;
 
 import 'package:http/http.dart' as http;
 
@@ -32,20 +33,24 @@ class GeoapifyService {
       );
     }
 
+    final responseBody = response.body;
     final Map<String, dynamic> jsonMap =
-        jsonDecode(response.body) as Map<String, dynamic>;
+        jsonDecode(responseBody) as Map<String, dynamic>;
     final features = jsonMap['features'];
     if (features is! List || features.isEmpty) {
+      _logNoMatch(query, responseBody);
       return null;
     }
 
     final firstFeature = features.first;
     if (firstFeature is! Map<String, dynamic>) {
+      _logNoMatch(query, responseBody);
       return null;
     }
 
     final properties = firstFeature['properties'];
     if (properties is! Map<String, dynamic>) {
+      _logNoMatch(query, responseBody);
       return null;
     }
 
@@ -60,10 +65,22 @@ class GeoapifyService {
         .where((line) => line.isNotEmpty)
         .join(', ');
 
-    return fallback.isEmpty ? null : fallback;
+    if (fallback.isEmpty) {
+      _logNoMatch(query, responseBody);
+      return null;
+    }
+
+    return fallback;
   }
 
   void dispose() {
     _httpClient.close();
+  }
+
+  void _logNoMatch(String query, String responseBody) {
+    developer.log(
+      'Geoapify lookup returned no matches for query: $query. Response: $responseBody',
+      name: 'GeoapifyService',
+    );
   }
 }
