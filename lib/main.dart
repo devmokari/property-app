@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'address_lookup/address_lookup_page.dart';
+
 void main() {
   runApp(const PropertyApp());
 }
@@ -12,15 +14,11 @@ class PropertyApp extends StatelessWidget {
     return MaterialApp(
       title: 'Property App',
       debugShowCheckedModeBanner: false,
-      home: const Scaffold(
-        backgroundColor: Colors.white,
-        body: Center(
-          child: Text(
-            'Hello Property App 👋',
-            style: TextStyle(fontSize: 28, fontWeight: FontWeight.w600),
-          ),
-        ),
+      theme: ThemeData(
+        colorScheme: ColorScheme.fromSeed(seedColor: Colors.indigo),
+        useMaterial3: true,
       ),
+      home: const AddressLookupPage(),
     );
   }
 }
