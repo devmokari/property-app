@@ -2,3 +2,14 @@
 build/*
 pubspec.lock
 .vscode/*
+android/*
+ios/*
+.idea/*
+linux/*
+macos/*
+windows/*
+web/*
+.metadata
+analysis_options.yaml
+test/*
+

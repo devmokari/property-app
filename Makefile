@@ -26,6 +26,7 @@ help:
 setup:
 	@echo "🔧 Setting up Flutter environment for $(APP_NAME)..."
 	flutter pub get
+	flutter create .
 
 run-web:
 	@echo "🌐 Running $(APP_NAME) on Web..."
@@ -33,11 +34,11 @@ run-web:
 
 run-android:
 	@echo "🤖 Running $(APP_NAME) on Android..."
-	flutter run -d android
+	flutter run -d emulator-5554
 
 run-ios:
 	@echo "🍎 Running $(APP_NAME) on iOS..."
-	flutter run -d ios
+	flutter run -d 563796BD-7F19-4303-A8A0-A5CA51354FEF
 
 build-web:
 	@echo "📦 Building $(APP_NAME) for Web..."
