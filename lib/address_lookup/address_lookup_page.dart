@@ -216,7 +216,7 @@ class _AddressLookupPageState extends State<AddressLookupPage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Property App'),
+        title: const Text('HomeGPT'),
       ),
       body: SafeArea(
         child: SingleChildScrollView(

@@ -1,5 +1,5 @@
-name: property_app
-description: "A cross-platform Flutter starter for the Property App."
+name: homegpt
+description: "A cross-platform Flutter starter for the HomeGPT app."
 version: 0.1.0
 publish_to: "none"
 
