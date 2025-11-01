@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../config/app_config.dart';
@@ -17,6 +19,11 @@ class _AddressLookupPageState extends State<AddressLookupPage> {
   String? _matchedAddress;
   String? _errorMessage;
   String? _configError;
+  Timer? _debounce;
+  bool _isAutocompleteLoading = false;
+  String? _autocompleteError;
+  List<String> _suggestions = const [];
+  String _latestAutocompleteQuery = '';
 
   @override
   void initState() {
@@ -51,6 +58,9 @@ class _AddressLookupPageState extends State<AddressLookupPage> {
       setState(() {
         _matchedAddress = null;
         _errorMessage = 'Enter an address to search.';
+        _suggestions = const [];
+        _autocompleteError = null;
+        _isAutocompleteLoading = false;
       });
       return;
     }
@@ -61,15 +71,21 @@ class _AddressLookupPageState extends State<AddressLookupPage> {
         _matchedAddress = null;
         _errorMessage =
             _configError ?? 'Geoapify API key not available. Check config.';
+        _suggestions = const [];
+        _isAutocompleteLoading = false;
       });
       return;
     }
 
+    _debounce?.cancel();
     FocusScope.of(context).unfocus();
     setState(() {
       _isLoading = true;
       _matchedAddress = null;
       _errorMessage = null;
+      _autocompleteError = null;
+      _suggestions = const [];
+      _isAutocompleteLoading = false;
     });
 
     try {
@@ -105,8 +121,93 @@ class _AddressLookupPageState extends State<AddressLookupPage> {
   @override
   void dispose() {
     _geoapifyService?.dispose();
+    _debounce?.cancel();
     _addressController.dispose();
     super.dispose();
+  }
+
+  void _onAddressChanged(String value) {
+    _debounce?.cancel();
+
+    final query = value.trim();
+    if (query.length < 3) {
+      setState(() {
+        _suggestions = const [];
+        _autocompleteError = null;
+        _isAutocompleteLoading = false;
+        _latestAutocompleteQuery = query;
+      });
+      return;
+    }
+
+    final service = _geoapifyService;
+    if (service == null) {
+      setState(() {
+        _suggestions = const [];
+        _isAutocompleteLoading = false;
+        _autocompleteError =
+            _configError ?? 'Geoapify API key not available. Check config.';
+        _latestAutocompleteQuery = query;
+      });
+      return;
+    }
+
+    setState(() {
+      _isAutocompleteLoading = true;
+      _autocompleteError = null;
+      _latestAutocompleteQuery = query;
+    });
+
+    _debounce = Timer(const Duration(milliseconds: 350), () async {
+      try {
+        final suggestions = await service.autocomplete(query);
+        if (!mounted || query != _latestAutocompleteQuery) {
+          return;
+        }
+        setState(() {
+          _suggestions = suggestions;
+          _autocompleteError = null;
+        });
+      } on GeoapifyException catch (error) {
+        if (!mounted || query != _latestAutocompleteQuery) {
+          return;
+        }
+        setState(() {
+          _suggestions = const [];
+          _autocompleteError = error.message;
+        });
+      } catch (error) {
+        if (!mounted || query != _latestAutocompleteQuery) {
+          return;
+        }
+        setState(() {
+          _suggestions = const [];
+          _autocompleteError = 'Failed to fetch address suggestions: $error';
+        });
+      } finally {
+        if (!mounted || query != _latestAutocompleteQuery) {
+          return;
+        }
+        setState(() {
+          _isAutocompleteLoading = false;
+        });
+      }
+    });
+  }
+
+  Future<void> _onSuggestionSelected(String suggestion) async {
+    _addressController.text = suggestion;
+    _addressController.selection = TextSelection.fromPosition(
+      TextPosition(offset: suggestion.length),
+    );
+
+    setState(() {
+      _suggestions = const [];
+      _autocompleteError = null;
+      _latestAutocompleteQuery = suggestion;
+    });
+
+    await _searchAddress();
   }
 
   @override
@@ -133,12 +234,40 @@ class _AddressLookupPageState extends State<AddressLookupPage> {
                 controller: _addressController,
                 textInputAction: TextInputAction.search,
                 onSubmitted: (_) => _searchAddress(),
+                onChanged: _onAddressChanged,
                 decoration: const InputDecoration(
                   border: OutlineInputBorder(),
                   labelText: 'Property address',
                   hintText: '123 Main St, Springfield',
                 ),
               ),
+              if (_isAutocompleteLoading) ...[
+                const SizedBox(height: 12),
+                const LinearProgressIndicator(),
+              ],
+              if (_autocompleteError != null && _configError == null) ...[
+                const SizedBox(height: 12),
+                Text(
+                  _autocompleteError!,
+                  style:
+                      theme.textTheme.bodyMedium?.copyWith(color: Colors.red),
+                ),
+              ],
+              if (_suggestions.isNotEmpty) ...[
+                const SizedBox(height: 12),
+                Card(
+                  elevation: 2,
+                  child: Column(
+                    children: [
+                      for (final suggestion in _suggestions)
+                        ListTile(
+                          title: Text(suggestion),
+                          onTap: () => _onSuggestionSelected(suggestion),
+                        ),
+                    ],
+                  ),
+                ),
+              ],
               const SizedBox(height: 16),
               ElevatedButton(
                 onPressed: _isLoading ? null : _searchAddress,

@@ -19,6 +19,58 @@ class GeoapifyService {
   final String apiKey;
   final http.Client _httpClient;
 
+  Future<List<String>> autocomplete(String query) async {
+    final uri = Uri.https('api.geoapify.com', '/v1/geocode/autocomplete', {
+      'text': query,
+      'limit': '5',
+      'apiKey': apiKey,
+    });
+
+    final response = await _httpClient.get(uri);
+    if (response.statusCode != 200) {
+      throw GeoapifyException(
+        'Address suggestions unavailable (${response.statusCode}). Try again later.',
+      );
+    }
+
+    final Map<String, dynamic> jsonMap =
+        jsonDecode(response.body) as Map<String, dynamic>;
+    final features = jsonMap['features'];
+    if (features is! List || features.isEmpty) {
+      return const [];
+    }
+
+    final suggestions = <String>{};
+    for (final feature in features) {
+      if (feature is! Map<String, dynamic>) {
+        continue;
+      }
+
+      final properties = feature['properties'];
+      if (properties is! Map<String, dynamic>) {
+        continue;
+      }
+
+      final formatted = (properties['formatted'] as String?)?.trim();
+      if (formatted != null && formatted.isNotEmpty) {
+        suggestions.add(formatted);
+        continue;
+      }
+
+      final fallback = [properties['address_line1'], properties['address_line2']]
+          .whereType<String>()
+          .map((line) => line.trim())
+          .where((line) => line.isNotEmpty)
+          .join(', ');
+
+      if (fallback.isNotEmpty) {
+        suggestions.add(fallback);
+      }
+    }
+
+    return suggestions.toList(growable: false);
+  }
+
   Future<String?> lookup(String query) async {
     final uri = Uri.https('api.geoapify.com', '/v1/geocode/search', {
       'text': query,
