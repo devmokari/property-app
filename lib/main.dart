@@ -3,16 +3,16 @@ import 'package:flutter/material.dart';
 import 'address_lookup/address_lookup_page.dart';
 
 void main() {
-  runApp(const PropertyApp());
+  runApp(const HomegptApp());
 }
 
-class PropertyApp extends StatelessWidget {
-  const PropertyApp({super.key});
+class HomegptApp extends StatelessWidget {
+  const HomegptApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Property App',
+      title: 'HomeGPT',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.indigo),

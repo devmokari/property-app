@@ -1,4 +1,4 @@
-# Property App - Environment Setup
+# HomeGPT - Environment Setup
 # -------------------------------
 # Usage:
 # make setup        -> Install dependencies
@@ -8,14 +8,14 @@
 # make build-web    -> Build web release
 # make clean        -> Clean project
 
-APP_NAME := property-app
+APP_NAME := homegpt
 
 .PHONY: help setup run-web run-android run-ios build-web clean
 
 .DEFAULT_GOAL := help
 
 help:
-	@echo "Property App - Available make targets:"
+@echo "HomeGPT - Available make targets:"
 	@echo "  make setup        -> Install dependencies"
 	@echo "  make run-web      -> Run on browser"
 	@echo "  make run-android  -> Run on Android"

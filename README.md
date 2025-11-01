@@ -1,6 +1,6 @@
-# Property App
+# HomeGPT
 
-A minimal Flutter starter configured for the Property App project. The initial goal is to ensure every contributor can bootstrap a working Flutter environment that targets iOS, Android, and Web from a single codebase.
+A minimal Flutter starter configured for the HomeGPT project. The initial goal is to ensure every contributor can bootstrap a working Flutter environment that targets iOS, Android, and Web from a single codebase.
 
 ## Prerequisites
 
@@ -47,7 +47,7 @@ make clean
 ## Project Structure
 
 ```
-property-app/
+homegpt/
 ├── lib/
 │   └── main.dart
 ├── pubspec.yaml
@@ -57,4 +57,4 @@ property-app/
 
 ## Hello World
 
-Running any of the `make run-*` targets will display the message **“Hello Property App 👋”** in the selected platform target.
+Running any of the `make run-*` targets will display the message **“Hello HomeGPT 👋”** in the selected platform target.
