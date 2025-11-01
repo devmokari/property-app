@@ -53,7 +53,7 @@ class HomegptApp extends StatelessWidget {
             fontWeight: FontWeight.w700,
           ),
         ),
-        cardTheme: CardTheme(
+        cardTheme: CardThemeData(
           color: Colors.white,
           surfaceTintColor: Colors.white,
           elevation: 3,
