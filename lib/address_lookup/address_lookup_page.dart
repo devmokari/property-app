@@ -216,6 +216,13 @@ class _AddressLookupPageState extends State<AddressLookupPage> {
 
     return Scaffold(
       appBar: AppBar(
+        leading: Padding(
+          padding: const EdgeInsets.all(12),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: Image.asset('assets/icon.png'),
+          ),
+        ),
         title: const Text('HomeGPT'),
       ),
       body: SafeArea(
@@ -224,10 +231,55 @@ class _AddressLookupPageState extends State<AddressLookupPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              Container(
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.primaryContainer,
+                  borderRadius: BorderRadius.circular(28),
+                  boxShadow: [
+                    BoxShadow(
+                      color: theme.colorScheme.primary.withOpacity(0.18),
+                      blurRadius: 24,
+                      offset: const Offset(0, 12),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(20),
+                      child: Image.asset(
+                        'assets/icon.png',
+                        width: 64,
+                        height: 64,
+                        fit: BoxFit.cover,
+                      ),
+                    ),
+                    const SizedBox(width: 20),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Find your next home',
+                            style: theme.textTheme.headlineSmall,
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Search for property addresses and confirm the perfect location for your clients or listings.',
+                            style: theme.textTheme.bodyMedium,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 28),
               Text(
                 'Address lookup',
-                style: theme.textTheme.headlineSmall
-                    ?.copyWith(fontWeight: FontWeight.w600),
+                style: theme.textTheme.titleMedium,
               ),
               const SizedBox(height: 24),
               TextField(
@@ -236,14 +288,19 @@ class _AddressLookupPageState extends State<AddressLookupPage> {
                 onSubmitted: (_) => _searchAddress(),
                 onChanged: _onAddressChanged,
                 decoration: const InputDecoration(
-                  border: OutlineInputBorder(),
                   labelText: 'Property address',
                   hintText: '123 Main St, Springfield',
+                  prefixIcon: Icon(Icons.home_work_outlined),
                 ),
               ),
               if (_isAutocompleteLoading) ...[
                 const SizedBox(height: 12),
-                const LinearProgressIndicator(),
+                LinearProgressIndicator(
+                  minHeight: 3,
+                  color: theme.colorScheme.primary,
+                  backgroundColor:
+                      theme.colorScheme.primaryContainer.withOpacity(0.6),
+                ),
               ],
               if (_autocompleteError != null && _configError == null) ...[
                 const SizedBox(height: 12),
@@ -256,11 +313,14 @@ class _AddressLookupPageState extends State<AddressLookupPage> {
               if (_suggestions.isNotEmpty) ...[
                 const SizedBox(height: 12),
                 Card(
-                  elevation: 2,
                   child: Column(
                     children: [
                       for (final suggestion in _suggestions)
                         ListTile(
+                          leading: Icon(
+                            Icons.place_outlined,
+                            color: theme.colorScheme.primary,
+                          ),
                           title: Text(suggestion),
                           onTap: () => _onSuggestionSelected(suggestion),
                         ),
@@ -299,8 +359,7 @@ class _AddressLookupPageState extends State<AddressLookupPage> {
                 const SizedBox(height: 24),
                 Text(
                   'Matched address',
-                  style: theme.textTheme.titleMedium
-                      ?.copyWith(fontWeight: FontWeight.w600),
+                  style: theme.textTheme.titleMedium,
                 ),
                 const SizedBox(height: 8),
                 Card(
