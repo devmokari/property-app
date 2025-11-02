@@ -24,6 +24,7 @@ class _AddressLookupPageState extends State<AddressLookupPage> {
   String? _autocompleteError;
   List<String> _suggestions = const [];
   String _latestAutocompleteQuery = '';
+  Map<String, String>? _propertyAttributes;
 
   @override
   void initState() {
@@ -61,6 +62,7 @@ class _AddressLookupPageState extends State<AddressLookupPage> {
         _suggestions = const [];
         _autocompleteError = null;
         _isAutocompleteLoading = false;
+        _propertyAttributes = null;
       });
       return;
     }
@@ -73,6 +75,7 @@ class _AddressLookupPageState extends State<AddressLookupPage> {
             _configError ?? 'Geoapify API key not available. Check config.';
         _suggestions = const [];
         _isAutocompleteLoading = false;
+        _propertyAttributes = null;
       });
       return;
     }
@@ -86,6 +89,7 @@ class _AddressLookupPageState extends State<AddressLookupPage> {
       _autocompleteError = null;
       _suggestions = const [];
       _isAutocompleteLoading = false;
+      _propertyAttributes = null;
     });
 
     try {
@@ -95,20 +99,24 @@ class _AddressLookupPageState extends State<AddressLookupPage> {
         if (result == null) {
           _errorMessage = 'No matches found for the provided address.';
           _matchedAddress = null;
+          _propertyAttributes = null;
         } else {
           _matchedAddress = result;
           _errorMessage = null;
+          _propertyAttributes = _generateMockPropertyAttributes(result);
         }
       });
     } on GeoapifyException catch (error) {
       if (!mounted) return;
       setState(() {
         _errorMessage = error.message;
+        _propertyAttributes = null;
       });
     } catch (error) {
       if (!mounted) return;
       setState(() {
         _errorMessage = 'Address lookup failed: $error';
+        _propertyAttributes = null;
       });
     } finally {
       if (!mounted) return;
@@ -210,6 +218,30 @@ class _AddressLookupPageState extends State<AddressLookupPage> {
     await _searchAddress();
   }
 
+  Map<String, String> _generateMockPropertyAttributes(String address) {
+    final hash = address.codeUnits.fold<int>(0, (value, element) {
+      return (value + element * 31) & 0x7fffffff;
+    });
+
+    int rangedValue(int min, int max, int seed) =>
+        min + (seed % (max - min + 1));
+
+    final bedrooms = rangedValue(1, 5, hash);
+    final bathrooms = rangedValue(1, 4, hash ~/ 3);
+    final yearBuilt = 1950 + rangedValue(0, 73, hash ~/ 7);
+    final squareFeet =
+        (900 + rangedValue(0, 2200, hash ~/ 11)) ~/ 10 * 10;
+    final lotSize = (0.08 + (hash % 50) / 100).toStringAsFixed(2);
+
+    return {
+      'Bedrooms': '$bedrooms',
+      'Bathrooms': bathrooms.toString(),
+      'Year built': yearBuilt.toString(),
+      'Square footage': '${squareFeet} sqft',
+      'Lot size': '$lotSize acres',
+    };
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -287,10 +319,20 @@ class _AddressLookupPageState extends State<AddressLookupPage> {
                 textInputAction: TextInputAction.search,
                 onSubmitted: (_) => _searchAddress(),
                 onChanged: _onAddressChanged,
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   labelText: 'Property address',
                   hintText: '123 Main St, Springfield',
-                  prefixIcon: Icon(Icons.home_work_outlined),
+                  prefixIcon: IconButton(
+                    icon: _isLoading
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.search),
+                    onPressed: _isLoading ? null : _searchAddress,
+                    tooltip: 'Search property',
+                  ),
                 ),
               ),
               if (_isAutocompleteLoading) ...[
@@ -328,17 +370,6 @@ class _AddressLookupPageState extends State<AddressLookupPage> {
                   ),
                 ),
               ],
-              const SizedBox(height: 16),
-              ElevatedButton(
-                onPressed: _isLoading ? null : _searchAddress,
-                child: _isLoading
-                    ? const SizedBox(
-                        height: 20,
-                        width: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Text('Find address'),
-              ),
               if (_configError != null) ...[
                 const SizedBox(height: 16),
                 Text(
@@ -369,6 +400,30 @@ class _AddressLookupPageState extends State<AddressLookupPage> {
                       _matchedAddress!,
                       style: theme.textTheme.bodyLarge,
                     ),
+                  ),
+                ),
+              ],
+              if (_propertyAttributes != null) ...[
+                const SizedBox(height: 24),
+                Text(
+                  'Property attributes',
+                  style: theme.textTheme.titleMedium,
+                ),
+                const SizedBox(height: 8),
+                Card(
+                  child: Column(
+                    children: _propertyAttributes!.entries
+                        .map(
+                          (entry) => ListTile(
+                            leading: Icon(
+                              Icons.label_important_outline,
+                              color: theme.colorScheme.primary,
+                            ),
+                            title: Text(entry.key),
+                            trailing: Text(entry.value),
+                          ),
+                        )
+                        .toList(),
                   ),
                 ),
               ],
