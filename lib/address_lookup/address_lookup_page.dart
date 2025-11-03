@@ -18,7 +18,6 @@ class _AddressLookupPageState extends State<AddressLookupPage> {
   final TextEditingController _addressController = TextEditingController();
   GeoapifyService? _geoapifyService;
   bool _isLoading = false;
-  String? _matchedAddress;
   String? _selectedAddress;
   String? _errorMessage;
   String? _configError;
@@ -104,7 +103,6 @@ class _AddressLookupPageState extends State<AddressLookupPage> {
     FocusScope.of(context).unfocus();
     setState(() {
       _isLoading = true;
-      _matchedAddress = null;
       _errorMessage = null;
       _autocompleteError = null;
       _propertyAttributes = null;
@@ -129,7 +127,6 @@ class _AddressLookupPageState extends State<AddressLookupPage> {
         final decoded = jsonDecode(response.body);
         if (decoded is Map<String, dynamic>) {
           setState(() {
-            _matchedAddress = address;
             _propertyAttributes = decoded;
             _propertyJson = const JsonEncoder.withIndent('  ').convert(decoded);
           });
@@ -194,7 +191,6 @@ class _AddressLookupPageState extends State<AddressLookupPage> {
         _isAutocompleteLoading = false;
         _latestAutocompleteQuery = query;
         _selectedAddress = null;
-        _matchedAddress = null;
         _propertyAttributes = null;
         _propertyJson = null;
         _errorMessage = null;
@@ -211,7 +207,6 @@ class _AddressLookupPageState extends State<AddressLookupPage> {
             _configError ?? 'Geoapify API key not available. Check config.';
         _latestAutocompleteQuery = query;
         _selectedAddress = null;
-        _matchedAddress = null;
         _propertyAttributes = null;
         _propertyJson = null;
         _errorMessage = null;
@@ -224,7 +219,6 @@ class _AddressLookupPageState extends State<AddressLookupPage> {
       _autocompleteError = null;
       _latestAutocompleteQuery = query;
       _selectedAddress = null;
-      _matchedAddress = null;
       _propertyAttributes = null;
       _propertyJson = null;
       _errorMessage = null;
@@ -279,7 +273,6 @@ class _AddressLookupPageState extends State<AddressLookupPage> {
       _autocompleteError = null;
       _latestAutocompleteQuery = suggestion;
       _selectedAddress = suggestion;
-      _matchedAddress = null;
       _propertyAttributes = null;
       _propertyJson = null;
       _errorMessage = null;
@@ -434,23 +427,6 @@ class _AddressLookupPageState extends State<AddressLookupPage> {
                       theme.textTheme.bodyMedium?.copyWith(color: Colors.red),
                 ),
               ],
-              if (_matchedAddress != null) ...[
-                const SizedBox(height: 24),
-                Text(
-                  'Matched address',
-                  style: theme.textTheme.titleMedium,
-                ),
-                const SizedBox(height: 8),
-                Card(
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Text(
-                      _matchedAddress!,
-                      style: theme.textTheme.bodyLarge,
-                    ),
-                  ),
-                ),
-              ],
               if (_propertyAttributes != null) ...[
                 const SizedBox(height: 24),
                 Text(
@@ -461,7 +437,7 @@ class _AddressLookupPageState extends State<AddressLookupPage> {
                 Card(
                   child: _PropertySummaryCard(
                     attributes: _propertyAttributes!,
-                    address: _matchedAddress,
+                    address: _selectedAddress,
                   ),
                 ),
                 const SizedBox(height: 12),
