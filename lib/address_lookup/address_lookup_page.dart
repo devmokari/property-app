@@ -459,19 +459,30 @@ class _AddressLookupPageState extends State<AddressLookupPage> {
                 ),
                 const SizedBox(height: 8),
                 Card(
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      child: SelectableText(
-                        _propertyJson ??
-                            const JsonEncoder.withIndent('  ')
-                                .convert(_propertyAttributes),
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                          fontFamily: 'monospace',
+                  child: _PropertySummaryCard(
+                    attributes: _propertyAttributes!,
+                    address: _matchedAddress,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Card(
+                  child: ExpansionTile(
+                    initiallyExpanded: false,
+                    title: const Text('View raw response'),
+                    children: [
+                      SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        padding: const EdgeInsets.all(16),
+                        child: SelectableText(
+                          _propertyJson ??
+                              const JsonEncoder.withIndent('  ')
+                                  .convert(_propertyAttributes),
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            fontFamily: 'monospace',
+                          ),
                         ),
                       ),
-                    ),
+                    ],
                   ),
                 ),
               ],
@@ -479,6 +490,346 @@ class _AddressLookupPageState extends State<AddressLookupPage> {
           ),
         ),
       ),
+    );
+  }
+}
+
+class _PropertySummaryCard extends StatelessWidget {
+  const _PropertySummaryCard({
+    required this.attributes,
+    this.address,
+  });
+
+  final Map<String, dynamic> attributes;
+  final String? address;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final propertyType = _stringOrNull(attributes['property_type']);
+    final council = _stringOrNull(attributes['council']);
+    final estimatedValue = _numOrNull(attributes['estimated_value_aud']);
+    final priceLower = _numOrNull(attributes['price_lower_bound']);
+    final priceUpper = _numOrNull(attributes['price_upper_bound']);
+    final bedrooms = _intOrNull(attributes['bedrooms']);
+    final bathrooms = _intOrNull(attributes['bathrooms']);
+    final carSpaces = _intOrNull(attributes['car_spaces']);
+    final lotSize = _numOrNull(attributes['lot_size_m2']);
+    final overlays = _stringList(attributes['overlays']);
+    final schoolZones = _stringList(attributes['zoning_schools']);
+    final internet = _stringOrNull(attributes['internet']);
+
+    final metrics = <_PropertyMetricData>[
+      if (propertyType != null)
+        _PropertyMetricData(
+          icon: Icons.home_work_outlined,
+          value: propertyType,
+          label: 'Property type',
+        ),
+      if (bedrooms != null)
+        _PropertyMetricData(
+          icon: Icons.bed_outlined,
+          value: bedrooms.toString(),
+          label: bedrooms == 1 ? 'Bedroom' : 'Bedrooms',
+        ),
+      if (bathrooms != null)
+        _PropertyMetricData(
+          icon: Icons.bathtub_outlined,
+          value: bathrooms.toString(),
+          label: bathrooms == 1 ? 'Bathroom' : 'Bathrooms',
+        ),
+      if (carSpaces != null)
+        _PropertyMetricData(
+          icon: Icons.directions_car_outlined,
+          value: carSpaces.toString(),
+          label: carSpaces == 1 ? 'Car space' : 'Car spaces',
+        ),
+      if (lotSize != null)
+        _PropertyMetricData(
+          icon: Icons.square_foot,
+          value: _formatArea(lotSize),
+          label: 'Land size',
+        ),
+    ];
+
+    final estimatedValueText = _formatCurrency(estimatedValue);
+    final priceGuideText = _formatPriceRange(priceLower, priceUpper);
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (address != null) ...[
+            Text(
+              address!,
+              style: theme.textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            const SizedBox(height: 4),
+          ],
+          if (council != null)
+            Text(
+              council,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          if (estimatedValueText != null || priceGuideText != null) ...[
+            const SizedBox(height: 20),
+            if (estimatedValueText != null) ...[
+              Text(
+                'Estimated value',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                estimatedValueText,
+                style: theme.textTheme.headlineSmall?.copyWith(
+                  color: theme.colorScheme.primary,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+            if (priceGuideText != null) ...[
+              if (estimatedValueText != null) const SizedBox(height: 12),
+              Text(
+                'Price guide',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                priceGuideText,
+                style: theme.textTheme.bodyLarge?.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ],
+          if (metrics.isNotEmpty) ...[
+            const SizedBox(height: 20),
+            Wrap(
+              spacing: 16,
+              runSpacing: 12,
+              children: [
+                for (final metric in metrics) _PropertyMetricPill(metric: metric),
+              ],
+            ),
+          ],
+          if (overlays.isNotEmpty) ...[
+            const SizedBox(height: 24),
+            Text(
+              'Planning overlays',
+              style: theme.textTheme.bodyMedium?.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                for (final overlay in overlays)
+                  Chip(
+                    avatar: const Icon(Icons.layers_outlined, size: 18),
+                    label: Text(overlay),
+                  ),
+              ],
+            ),
+          ],
+          if (schoolZones.isNotEmpty) ...[
+            const SizedBox(height: 24),
+            Text(
+              'School zones',
+              style: theme.textTheme.bodyMedium?.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                for (final zone in schoolZones)
+                  Chip(
+                    avatar: const Icon(Icons.school_outlined, size: 18),
+                    label: Text(zone),
+                  ),
+              ],
+            ),
+          ],
+          if (internet != null) ...[
+            const SizedBox(height: 24),
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.wifi_tethering_outlined,
+                  color: theme.colorScheme.primary,
+                ),
+                const SizedBox(width: 10),
+                Text(
+                  'Internet: $internet',
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  static String? _formatCurrency(num? value) {
+    if (value == null) return null;
+    return '${String.fromCharCode(36)}${_formatNumber(value)}';
+  }
+
+  static String? _formatPriceRange(num? lower, num? upper) {
+    if (lower == null && upper == null) return null;
+    final formattedLower = lower != null ? _formatCurrency(lower) : null;
+    final formattedUpper = upper != null ? _formatCurrency(upper) : null;
+
+    if (formattedLower != null && formattedUpper != null) {
+      return '$formattedLower – $formattedUpper';
+    }
+    return formattedLower ?? formattedUpper;
+  }
+
+  static String _formatArea(num value) {
+    return '${_formatNumber(value)} m²';
+  }
+
+  static String _formatNumber(num value) {
+    final precision = value is int || value % 1 == 0 ? 0 : 1;
+    final numberString = value.toStringAsFixed(precision);
+    final parts = numberString.split('.');
+    final base = parts.first;
+    final isNegative = base.startsWith('-');
+    final integerPart = isNegative ? base.substring(1) : base;
+
+    final buffer = StringBuffer();
+    for (var i = 0; i < integerPart.length; i++) {
+      buffer.write(integerPart[i]);
+      final remaining = integerPart.length - i - 1;
+      if (remaining > 0 && remaining % 3 == 0) {
+        buffer.write(',');
+      }
+    }
+
+    var decimalPart = '';
+    if (parts.length > 1) {
+      decimalPart = parts[1].replaceAll(RegExp(r'0+$'), '');
+    }
+
+    final formattedInteger = '${isNegative ? '-' : ''}${buffer.toString()}';
+    return decimalPart.isNotEmpty
+        ? '$formattedInteger.$decimalPart'
+        : formattedInteger;
+  }
+
+  static String? _stringOrNull(dynamic value) {
+    if (value is String && value.trim().isNotEmpty) {
+      return value.trim();
+    }
+    return null;
+  }
+
+  static num? _numOrNull(dynamic value) {
+    if (value is num) return value;
+    if (value is String) {
+      final parsedInt = int.tryParse(value);
+      if (parsedInt != null) return parsedInt;
+      return double.tryParse(value);
+    }
+    return null;
+  }
+
+  static int? _intOrNull(dynamic value) {
+    final numeric = _numOrNull(value);
+    return numeric?.round();
+  }
+
+  static List<String> _stringList(dynamic value) {
+    if (value is List) {
+      return value
+          .whereType<String>()
+          .map((item) => item.trim())
+          .where((item) => item.isNotEmpty)
+          .toList();
+    }
+    return const [];
+  }
+}
+
+class _PropertyMetricData {
+  const _PropertyMetricData({
+    required this.icon,
+    required this.value,
+    this.label,
+  });
+
+  final IconData icon;
+  final String value;
+  final String? label;
+}
+
+class _PropertyMetricPill extends StatelessWidget {
+  const _PropertyMetricPill({required this.metric});
+
+  final _PropertyMetricData metric;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final content = Row(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Icon(
+          metric.icon,
+          color: theme.colorScheme.primary,
+          size: 22,
+        ),
+        const SizedBox(width: 10),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              metric.value,
+              style: theme.textTheme.bodyLarge?.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            if (metric.label != null) ...[
+              const SizedBox(height: 2),
+              Text(
+                metric.label!,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ],
+          ],
+        ),
+      ],
+    );
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.primaryContainer.withOpacity(0.35),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: content,
     );
   }
 }
