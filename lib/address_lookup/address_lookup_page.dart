@@ -1,6 +1,8 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 
 import '../config/app_config.dart';
 import 'geoapify_service.dart';
@@ -17,6 +19,7 @@ class _AddressLookupPageState extends State<AddressLookupPage> {
   GeoapifyService? _geoapifyService;
   bool _isLoading = false;
   String? _matchedAddress;
+  String? _selectedAddress;
   String? _errorMessage;
   String? _configError;
   Timer? _debounce;
@@ -24,7 +27,9 @@ class _AddressLookupPageState extends State<AddressLookupPage> {
   String? _autocompleteError;
   List<String> _suggestions = const [];
   String _latestAutocompleteQuery = '';
-  Map<String, String>? _propertyAttributes;
+  Map<String, dynamic>? _propertyAttributes;
+  String? _propertyJson;
+  bool _isProgrammaticSelection = false;
 
   @override
   void initState() {
@@ -53,70 +58,64 @@ class _AddressLookupPageState extends State<AddressLookupPage> {
     }
   }
 
-  Future<void> _searchAddress() async {
-    final query = _addressController.text.trim();
-    if (query.isEmpty) {
+  Future<void> _fetchPropertyAttributes() async {
+    final address = _selectedAddress?.trim();
+    if (address == null || address.isEmpty) {
       setState(() {
-        _matchedAddress = null;
-        _errorMessage = 'Enter an address to search.';
-        _suggestions = const [];
-        _autocompleteError = null;
-        _isAutocompleteLoading = false;
-        _propertyAttributes = null;
+        _errorMessage = 'Select an address before searching.';
       });
       return;
     }
 
-    final service = _geoapifyService;
-    if (service == null) {
-      setState(() {
-        _matchedAddress = null;
-        _errorMessage =
-            _configError ?? 'Geoapify API key not available. Check config.';
-        _suggestions = const [];
-        _isAutocompleteLoading = false;
-        _propertyAttributes = null;
-      });
-      return;
-    }
-
-    _debounce?.cancel();
     FocusScope.of(context).unfocus();
     setState(() {
       _isLoading = true;
       _matchedAddress = null;
       _errorMessage = null;
       _autocompleteError = null;
-      _suggestions = const [];
-      _isAutocompleteLoading = false;
       _propertyAttributes = null;
+      _propertyJson = null;
     });
 
     try {
-      final result = await service.lookup(query);
+      final response = await http.post(
+        Uri.parse(
+            'https://g7eku3ruwr6e2hduscxavmi6zy0wsiel.lambda-url.ap-southeast-2.on.aws/'),
+        headers: const {
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({
+          'action': 'getProperty',
+          'address': address,
+        }),
+      );
+
       if (!mounted) return;
-      setState(() {
-        if (result == null) {
-          _errorMessage = 'No matches found for the provided address.';
-          _matchedAddress = null;
-          _propertyAttributes = null;
+
+      if (response.statusCode == 200) {
+        final decoded = jsonDecode(response.body);
+        if (decoded is Map<String, dynamic>) {
+          setState(() {
+            _matchedAddress = address;
+            _propertyAttributes = decoded;
+            _propertyJson = const JsonEncoder.withIndent('  ').convert(decoded);
+          });
         } else {
-          _matchedAddress = result;
-          _errorMessage = null;
-          _propertyAttributes = _generateMockPropertyAttributes(result);
+          setState(() {
+            _errorMessage = 'Unexpected response format from property service.';
+          });
         }
-      });
-    } on GeoapifyException catch (error) {
-      if (!mounted) return;
-      setState(() {
-        _errorMessage = error.message;
-        _propertyAttributes = null;
-      });
+      } else {
+        final message = _parseErrorMessage(response.body);
+        setState(() {
+          _errorMessage =
+              'Failed to retrieve property details: ${response.statusCode} $message';
+        });
+      }
     } catch (error) {
       if (!mounted) return;
       setState(() {
-        _errorMessage = 'Address lookup failed: $error';
-        _propertyAttributes = null;
+        _errorMessage = 'Failed to retrieve property details: $error';
       });
     } finally {
       if (!mounted) return;
@@ -124,6 +123,18 @@ class _AddressLookupPageState extends State<AddressLookupPage> {
         _isLoading = false;
       });
     }
+  }
+
+  String _parseErrorMessage(String responseBody) {
+    try {
+      final decoded = jsonDecode(responseBody);
+      if (decoded is Map && decoded['error'] is String) {
+        return decoded['error'] as String;
+      }
+    } catch (_) {
+      // Ignore parsing errors and fall back to raw body.
+    }
+    return responseBody;
   }
 
   @override
@@ -135,6 +146,11 @@ class _AddressLookupPageState extends State<AddressLookupPage> {
   }
 
   void _onAddressChanged(String value) {
+    if (_isProgrammaticSelection) {
+      _isProgrammaticSelection = false;
+      return;
+    }
+
     _debounce?.cancel();
 
     final query = value.trim();
@@ -144,6 +160,11 @@ class _AddressLookupPageState extends State<AddressLookupPage> {
         _autocompleteError = null;
         _isAutocompleteLoading = false;
         _latestAutocompleteQuery = query;
+        _selectedAddress = null;
+        _matchedAddress = null;
+        _propertyAttributes = null;
+        _propertyJson = null;
+        _errorMessage = null;
       });
       return;
     }
@@ -156,6 +177,11 @@ class _AddressLookupPageState extends State<AddressLookupPage> {
         _autocompleteError =
             _configError ?? 'Geoapify API key not available. Check config.';
         _latestAutocompleteQuery = query;
+        _selectedAddress = null;
+        _matchedAddress = null;
+        _propertyAttributes = null;
+        _propertyJson = null;
+        _errorMessage = null;
       });
       return;
     }
@@ -164,6 +190,11 @@ class _AddressLookupPageState extends State<AddressLookupPage> {
       _isAutocompleteLoading = true;
       _autocompleteError = null;
       _latestAutocompleteQuery = query;
+      _selectedAddress = null;
+      _matchedAddress = null;
+      _propertyAttributes = null;
+      _propertyJson = null;
+      _errorMessage = null;
     });
 
     _debounce = Timer(const Duration(milliseconds: 350), () async {
@@ -204,6 +235,7 @@ class _AddressLookupPageState extends State<AddressLookupPage> {
   }
 
   Future<void> _onSuggestionSelected(String suggestion) async {
+    _isProgrammaticSelection = true;
     _addressController.text = suggestion;
     _addressController.selection = TextSelection.fromPosition(
       TextPosition(offset: suggestion.length),
@@ -213,33 +245,12 @@ class _AddressLookupPageState extends State<AddressLookupPage> {
       _suggestions = const [];
       _autocompleteError = null;
       _latestAutocompleteQuery = suggestion;
+      _selectedAddress = suggestion;
+      _matchedAddress = null;
+      _propertyAttributes = null;
+      _propertyJson = null;
+      _errorMessage = null;
     });
-
-    await _searchAddress();
-  }
-
-  Map<String, String> _generateMockPropertyAttributes(String address) {
-    final hash = address.codeUnits.fold<int>(0, (value, element) {
-      return (value + element * 31) & 0x7fffffff;
-    });
-
-    int rangedValue(int min, int max, int seed) =>
-        min + (seed % (max - min + 1));
-
-    final bedrooms = rangedValue(1, 5, hash);
-    final bathrooms = rangedValue(1, 4, hash ~/ 3);
-    final yearBuilt = 1950 + rangedValue(0, 73, hash ~/ 7);
-    final squareFeet =
-        (900 + rangedValue(0, 2200, hash ~/ 11)) ~/ 10 * 10;
-    final lotSize = (0.08 + (hash % 50) / 100).toStringAsFixed(2);
-
-    return {
-      'Bedrooms': '$bedrooms',
-      'Bathrooms': bathrooms.toString(),
-      'Year built': yearBuilt.toString(),
-      'Square footage': '${squareFeet} sqft',
-      'Lot size': '$lotSize acres',
-    };
   }
 
   @override
@@ -316,23 +327,27 @@ class _AddressLookupPageState extends State<AddressLookupPage> {
               const SizedBox(height: 24),
               TextField(
                 controller: _addressController,
-                textInputAction: TextInputAction.search,
-                onSubmitted: (_) => _searchAddress(),
+                textInputAction: TextInputAction.done,
                 onChanged: _onAddressChanged,
                 decoration: InputDecoration(
                   labelText: 'Property address',
                   hintText: '123 Main St, Springfield',
-                  prefixIcon: IconButton(
-                    icon: _isLoading
-                        ? const SizedBox(
+                  suffixIcon: _isLoading
+                      ? const Padding(
+                          padding: EdgeInsets.all(12),
+                          child: SizedBox(
                             width: 20,
                             height: 20,
                             child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : const Icon(Icons.search),
-                    onPressed: _isLoading ? null : _searchAddress,
-                    tooltip: 'Search property',
-                  ),
+                          ),
+                        )
+                      : IconButton(
+                          icon: const Icon(Icons.search),
+                          onPressed: _selectedAddress != null
+                              ? _fetchPropertyAttributes
+                              : null,
+                          tooltip: 'Search property',
+                        ),
                 ),
               ),
               if (_isAutocompleteLoading) ...[
@@ -411,19 +426,19 @@ class _AddressLookupPageState extends State<AddressLookupPage> {
                 ),
                 const SizedBox(height: 8),
                 Card(
-                  child: Column(
-                    children: _propertyAttributes!.entries
-                        .map(
-                          (entry) => ListTile(
-                            leading: Icon(
-                              Icons.label_important_outline,
-                              color: theme.colorScheme.primary,
-                            ),
-                            title: Text(entry.key),
-                            trailing: Text(entry.value),
-                          ),
-                        )
-                        .toList(),
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: SelectableText(
+                        _propertyJson ??
+                            const JsonEncoder.withIndent('  ')
+                                .convert(_propertyAttributes),
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          fontFamily: 'monospace',
+                        ),
+                      ),
+                    ),
                   ),
                 ),
               ],
