@@ -29,6 +29,7 @@ class _AddressLookupPageState extends State<AddressLookupPage> {
   String _latestAutocompleteQuery = '';
   Map<String, dynamic>? _propertyAttributes;
   String? _propertyJson;
+  String? _propertyServiceUrl;
   bool _isProgrammaticSelection = false;
 
   @override
@@ -40,19 +41,35 @@ class _AddressLookupPageState extends State<AddressLookupPage> {
   Future<void> _initialiseGeoapify() async {
     try {
       final apiKey = await AppConfig.loadGeoapifyApiKey();
-      if (!mounted) return;
+      final host = await AppConfig.loadGeoapifyHost();
+      final propertyServiceUrl = await AppConfig.loadPropertyServiceUrl();
+      final service = GeoapifyService(apiKey: apiKey, host: host);
+
+      if (!mounted) {
+        service.dispose();
+        return;
+      }
+
+      _geoapifyService?.dispose();
       setState(() {
-        _geoapifyService = GeoapifyService(apiKey: apiKey);
+        _geoapifyService = service;
+        _propertyServiceUrl = propertyServiceUrl;
         _configError = null;
       });
     } on AppConfigException catch (error) {
       if (!mounted) return;
+      _geoapifyService?.dispose();
       setState(() {
+        _geoapifyService = null;
+        _propertyServiceUrl = null;
         _configError = error.message;
       });
     } catch (error) {
       if (!mounted) return;
+      _geoapifyService?.dispose();
       setState(() {
+        _geoapifyService = null;
+        _propertyServiceUrl = null;
         _configError = 'Failed to load configuration: $error';
       });
     }
@@ -63,6 +80,23 @@ class _AddressLookupPageState extends State<AddressLookupPage> {
     if (address == null || address.isEmpty) {
       setState(() {
         _errorMessage = 'Select an address before searching.';
+      });
+      return;
+    }
+
+    final configError = _configError;
+    if (configError != null) {
+      setState(() {
+        _errorMessage = configError;
+      });
+      return;
+    }
+
+    final serviceUrl = _propertyServiceUrl?.trim();
+    if (serviceUrl == null || serviceUrl.isEmpty) {
+      setState(() {
+        _errorMessage =
+            'Property service URL not available. Check config.';
       });
       return;
     }
@@ -79,8 +113,7 @@ class _AddressLookupPageState extends State<AddressLookupPage> {
 
     try {
       final response = await http.post(
-        Uri.parse(
-            'https://g7eku3ruwr6e2hduscxavmi6zy0wsiel.lambda-url.ap-southeast-2.on.aws/'),
+        Uri.parse(serviceUrl),
         headers: const {
           'Content-Type': 'application/json',
         },

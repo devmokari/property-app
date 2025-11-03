@@ -13,14 +13,18 @@ class GeoapifyException implements Exception {
 }
 
 class GeoapifyService {
-  GeoapifyService({required this.apiKey, http.Client? httpClient})
-      : _httpClient = httpClient ?? http.Client();
+  GeoapifyService({
+    required this.apiKey,
+    required this.host,
+    http.Client? httpClient,
+  }) : _httpClient = httpClient ?? http.Client();
 
   final String apiKey;
+  final String host;
   final http.Client _httpClient;
 
   Future<List<String>> autocomplete(String query) async {
-    final uri = Uri.https('api.geoapify.com', '/v1/geocode/autocomplete', {
+    final uri = Uri.https(host, '/v1/geocode/autocomplete', {
       'text': query,
       'limit': '5',
       'apiKey': apiKey,
@@ -72,7 +76,7 @@ class GeoapifyService {
   }
 
   Future<String?> lookup(String query) async {
-    final uri = Uri.https('api.geoapify.com', '/v1/geocode/search', {
+    final uri = Uri.https(host, '/v1/geocode/search', {
       'text': query,
       'format': 'json',
       'apiKey': apiKey,
