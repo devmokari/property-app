@@ -14,6 +14,22 @@ IOS_EMULATOR_ID := apple_ios_simulator
 ANDROID_DEVICE_ID := emulator-5554
 ANDROID_EMULATOR_ID := Medium_Phone_API_36.1
 
+define ensure_device
+	@check_device() { flutter devices | grep -q "$(1)"; }; \
+	if ! check_device; then \
+		flutter emulators --launch $(2); \
+		attempts=0; \
+		while [ $$attempts -lt 12 ] && ! check_device; do \
+			sleep 5; \
+			attempts=$$((attempts + 1)); \
+		done; \
+	fi; \
+	if ! check_device; then \
+		echo "$(3) unavailable."; \
+		exit 1; \
+	fi
+endef
+
 .PHONY: help setup run-web run-android run-ios build-web clean launch-ios-simulator launch-android-emulator
 
 .DEFAULT_GOAL := help
@@ -39,38 +55,14 @@ run-web:
 	flutter run -d chrome
 
 run-android:
-        @echo "🤖 Running $(APP_NAME) on Android..."
-        @check_android() { flutter devices | grep -q "$(ANDROID_DEVICE_ID)"; }; \
-        if ! check_android; then \
-                flutter emulators --launch $(ANDROID_EMULATOR_ID); \
-                attempts=0; \
-                while [ $$attempts -lt 12 ] && ! check_android; do \
-                        sleep 5; \
-                        attempts=$$((attempts + 1)); \
-                done; \
-        fi; \
-        if ! check_android; then \
-                echo "Android emulator unavailable."; \
-                exit 1; \
-        fi
-        flutter run -d $(ANDROID_DEVICE_ID)
+	@echo "🤖 Running $(APP_NAME) on Android..."
+	$(call ensure_device,$(ANDROID_DEVICE_ID),$(ANDROID_EMULATOR_ID),Android emulator)
+	flutter run -d $(ANDROID_DEVICE_ID)
 
 run-ios:
-        @echo "🍎 Running $(APP_NAME) on iOS..."
-        @check_ios() { flutter devices | grep -q "$(IOS_DEVICE_ID)"; }; \
-        if ! check_ios; then \
-                flutter emulators --launch $(IOS_EMULATOR_ID); \
-                attempts=0; \
-                while [ $$attempts -lt 12 ] && ! check_ios; do \
-                        sleep 5; \
-                        attempts=$$((attempts + 1)); \
-                done; \
-        fi; \
-        if ! check_ios; then \
-                echo "iOS simulator unavailable."; \
-                exit 1; \
-        fi
-        flutter run -d $(IOS_DEVICE_ID)
+	@echo "🍎 Running $(APP_NAME) on iOS..."
+	$(call ensure_device,$(IOS_DEVICE_ID),$(IOS_EMULATOR_ID),iOS simulator)
+	flutter run -d $(IOS_DEVICE_ID)
 
 launch-ios-simulator:
 	@echo "🚀 Launching iOS simulator..."
